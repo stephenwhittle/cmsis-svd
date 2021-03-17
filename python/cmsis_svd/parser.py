@@ -26,6 +26,7 @@ from cmsis_svd.model import SVDRegister, SVDRegisterArray
 from cmsis_svd.model import SVDRegisterCluster, SVDRegisterClusterArray
 from cmsis_svd.model import SVDField
 from cmsis_svd.model import SVDEnumeratedValue
+from cmsis_svd.model import SVDEnumeratedValueGroup
 from cmsis_svd.model import SVDCpu
 import pkg_resources
 import re
@@ -127,6 +128,12 @@ def _get_text(node, tag, default=None):
     except AttributeError:
         return default
 
+def _get_attr(node, attr, default=None):
+    """Gets an attribute from the specified node"""
+    try:
+        return node.attrib[attr]
+    except (AttributeError, KeyError):
+        return default
 
 def _get_int(node, tag, default=None):
     text_value = _get_text(node, tag, default)
@@ -209,11 +216,27 @@ class SVDParser(object):
             is_default=_get_int(enumerated_value_node, 'isDefault')
         )
 
-    def _parse_field(self, field_node):
+    def _parse_enumerated_value_group(self, enumerated_value_group_node):
         enumerated_values = []
-        for enumerated_value_node in field_node.findall("./enumeratedValues/enumeratedValue"):
+        for enumerated_value_node in enumerated_value_group_node.findall("./enumeratedValue"):
             enumerated_values.append(self._parse_enumerated_value(enumerated_value_node))
 
+        return SVDEnumeratedValueGroup(
+            name=_get_text(enumerated_value_group_node, 'name'),
+            derived_from=_get_attr(enumerated_value_group_node, 'derivedFrom'),
+            usage=_get_text(enumerated_value_group_node, 'usage'),
+            values=enumerated_values or None
+        )
+
+    def _parse_field(self, field_node):
+        enumerated_values = []
+        enumerated_value_groups = []
+        for enumerated_value_group_node in field_node.findall("./enumeratedValues"):
+            enumerated_value_groups.append(self._parse_enumerated_value_group(enumerated_value_group_node))
+                    
+        for enumerated_value_node in field_node.findall("./enumeratedValues/enumeratedValue"):
+            enumerated_values.append(self._parse_enumerated_value(enumerated_value_node))
+        
         modified_write_values=_get_text(field_node, 'modifiedWriteValues')
         read_action=_get_text(field_node, 'readAction')
         bit_range = _get_text(field_node, 'bitRange')
@@ -239,6 +262,7 @@ class SVDParser(object):
             enumerated_values=enumerated_values or None,
             modified_write_values=modified_write_values,
             read_action=read_action,
+            enumerated_value_groups = enumerated_value_groups or None
         )
 
     def _parse_registers(self, register_node):

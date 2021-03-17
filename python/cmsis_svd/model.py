@@ -125,9 +125,16 @@ class SVDEnumeratedValue(SVDElement):
         self.value = value
         self.is_default = is_default
 
+class SVDEnumeratedValueGroup(SVDElement):
+    def __init__(self, name, derived_from, usage, values):
+        SVDElement.__init__(self)
+        self.name = name
+        self.derived_from = derived_from
+        self.usage = usage
+        self.values = values
 
 class SVDField(SVDElement):
-    def __init__(self, name, derived_from, description, bit_offset, bit_width, access, enumerated_values, modified_write_values, read_action):
+    def __init__(self, name, derived_from, description, bit_offset, bit_width, access, enumerated_values, modified_write_values, read_action, enumerated_value_groups):
         SVDElement.__init__(self)
         self.name = name
         self.derived_from = derived_from
@@ -138,6 +145,10 @@ class SVDField(SVDElement):
         self.enumerated_values = enumerated_values
         self.modified_write_values = modified_write_values
         self.read_action = read_action
+        self.enumerated_value_groups = enumerated_value_groups
+        if self.enumerated_value_groups:
+            for group in self.enumerated_value_groups:
+                group.parent = self
 
     def __getattr__(self, attr):
         return self._lookup_possibly_derived_attribute(attr)
